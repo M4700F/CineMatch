@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import for ConsumerS
 import 'providers/auth_provider.dart'; // Import auth provider
 import 'models/movie.dart';
 import 'widgets/gradient_background.dart';
+import 'screens/watchlist_page.dart'; // Import WatchlistPage to access its providers
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -253,6 +254,12 @@ class _MainShellState extends ConsumerState<MainShell> {
         context.go('/search');
         break;
       case 2:
+        // Invalidate watchlist providers to force a reload
+        final token = ref.read(authTokenProvider);
+        if (token != null) {
+          ref.invalidate(favoriteMovieIdsProvider(token));
+          ref.invalidate(watchLaterMovieIdsProvider(token));
+        }
         context.go('/watchlist');
         break;
       case 3:

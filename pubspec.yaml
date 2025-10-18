@@ -40,6 +40,7 @@ dependencies:
   go_router: ^14.2.7
   shared_preferences: ^2.5.3
   http: ^1.5.0
+  supabase_flutter: ^2.0.0 # Re-added for Supabase integration
   
   # Riverpod for state management
   flutter_riverpod: ^2.5.1

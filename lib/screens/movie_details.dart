@@ -150,13 +150,13 @@ class MovieDetailsPage extends ConsumerWidget {
                               shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                               ),
-                              builder: (ctx) => const SaveToSelectionSheet(),
+                              builder: (ctx) => SaveToSelectionSheet(movie: movie), // Pass the movie object
                             );
                             // TODO: Handle selectedOption (favorites or watch_later) when functionality is requested
                             if (selectedOption != null) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Selected: $selectedOption'),
+                                  content: Text('Saved to: $selectedOption'),
                                   backgroundColor: Theme.of(context).colorScheme.primary,
                                 ),
                               );

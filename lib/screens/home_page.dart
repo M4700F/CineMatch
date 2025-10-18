@@ -227,13 +227,13 @@ class _HomePageState extends ConsumerState<HomePage> {
                                   shape: const RoundedRectangleBorder(
                                     borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                                   ),
-                                  builder: (ctx) => const SaveToSelectionSheet(),
+                                  builder: (ctx) => SaveToSelectionSheet(movie: movie), // Pass the movie object
                                 );
                                 // TODO: Handle selectedOption (favorites or watch_later) when functionality is requested
                                 if (selectedOption != null) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('Selected: $selectedOption'),
+                                      content: Text('Saved to: $selectedOption'),
                                       backgroundColor: Theme.of(context).colorScheme.primary,
                                     ),
                                   );
@@ -609,43 +609,7 @@ class _HomePageState extends ConsumerState<HomePage> {
                                           ],
                                         ),
                                         const SizedBox(height: 6),
-                                        Padding(
-                                          padding: const EdgeInsets.only(left: 44),
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                padding: const EdgeInsets.symmetric(
-                                                  horizontal: 8,
-                                                  vertical: 4,
-                                                ),
-                                                decoration: BoxDecoration(
-                                                  color: Theme.of(context).colorScheme.secondaryContainer,
-                                                  borderRadius: BorderRadius.circular(12),
-                                                ),
-                                                child: Text(
-                                                  '${movies.length} movies',
-                                                  style: TextStyle(
-                                                    color: Theme.of(context).colorScheme.onSecondaryContainer,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontSize: 13,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
                                       ],
-                                    ),
-                                  ),
-                                  FilledButton.icon(
-                                    onPressed: _refreshMovies,
-                                    icon: const Icon(Icons.refresh, size: 18),
-                                    label: const Text('Refresh'),
-                                    style: FilledButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 10,
-                                      ),
                                     ),
                                   ),
                                 ],
