@@ -378,7 +378,7 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
     return Column(
       children: [
         Container(
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.fromLTRB(16, 24, 16, 16),
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surfaceVariant,
