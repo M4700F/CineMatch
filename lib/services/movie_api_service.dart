@@ -8,43 +8,58 @@ class MovieApiService {
   // static const String baseUrl = 'http://localhost:8080/api/movies';
   static final String baseUrl = "${ApiConfig.baseUrl}/api/movies";
 
-  
   static Future<MoviePageResponse> getAllMovies({
     int pageNumber = 0,
     int pageSize = 10,
     String sortBy = 'title',
     String sortDir = 'ASC',
+    String? token,
   }) async {
     try {
-      final uri = Uri.parse('$baseUrl/').replace(queryParameters: {
-        'pageNumber': pageNumber.toString(),
-        'pageSize': pageSize.toString(),
-        'sortBy': sortBy,
-        'sortDir': sortDir,
-      });
+      final uri = Uri.parse('$baseUrl/').replace(
+        queryParameters: {
+          'pageNumber': pageNumber.toString(),
+          'pageSize': pageSize.toString(),
+          'sortBy': sortBy,
+          'sortDir': sortDir,
+        },
+      );
 
       print('🔗 Making API request to: $uri');
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       print('📡 API Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully fetched ${jsonData['content']?.length ?? 0} movies from API');
+        print(
+          '✅ Successfully fetched ${jsonData['content']?.length ?? 0} movies from API',
+        );
         return MoviePageResponse.fromJson(jsonData);
       } else if (response.statusCode == 500) {
         print('❌ API Error: ${response.statusCode} - Server Error');
-        throw ApiException('Server is experiencing issues. Please try again later.', response.statusCode);
+        throw ApiException(
+          'Server is experiencing issues. Please try again later.',
+          response.statusCode,
+        );
       } else {
         print('❌ API Error: ${response.statusCode} - ${response.body}');
-        throw ApiException('Failed to load movies: ${response.statusCode}', response.statusCode);
+        throw ApiException(
+          'Failed to load movies: ${response.statusCode}',
+          response.statusCode,
+        );
       }
     } catch (e) {
       print('🚨 API Exception: $e');
@@ -52,21 +67,29 @@ class MovieApiService {
     }
   }
 
-  static Future<Movie> getMovieById(String movieId) async {
+  static Future<Movie> getMovieById(String movieId, {String? token}) async {
     try {
-      final response = await http.get(
-        Uri.parse('$baseUrl/$movieId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http
+          .get(Uri.parse('$baseUrl/$movieId'), headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         return Movie.fromJson(jsonData);
       } else {
-        throw ApiException('Failed to load movie: ${response.statusCode}', response.statusCode);
+        throw ApiException(
+          'Failed to load movie: ${response.statusCode}',
+          response.statusCode,
+        );
       }
     } catch (e) {
       throw Exception('Error fetching movie: $e');
@@ -74,35 +97,50 @@ class MovieApiService {
   }
 
   // Search movies by title
-  static Future<List<Movie>> searchMoviesByTitle(String keywords) async {
+  static Future<List<Movie>> searchMoviesByTitle(
+    String keywords, {
+    String? token,
+  }) async {
     try {
       if (keywords.trim().isEmpty) {
         return [];
       }
 
       final uri = Uri.parse('$baseUrl/search/${Uri.encodeComponent(keywords)}');
-      
+
       print('🔍 Searching movies with keywords: $keywords');
       print('🔗 Search API request to: $uri');
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ).timeout(const Duration(seconds: 10));
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      };
+
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      final response = await http
+          .get(uri, headers: headers)
+          .timeout(const Duration(seconds: 10));
 
       print('📡 Search API Response Status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final List<dynamic> jsonData = json.decode(response.body);
-        final List<Movie> movies = jsonData.map((movieJson) => Movie.fromJson(movieJson)).toList();
-        print('✅ Successfully found ${movies.length} movies matching "$keywords"');
+        final List<Movie> movies = jsonData
+            .map((movieJson) => Movie.fromJson(movieJson))
+            .toList();
+        print(
+          '✅ Successfully found ${movies.length} movies matching "$keywords"',
+        );
         return movies;
       } else {
         print('❌ Search API Error: ${response.statusCode} - ${response.body}');
-        throw ApiException('Failed to search movies: ${response.statusCode}', response.statusCode);
+        throw ApiException(
+          'Failed to search movies: ${response.statusCode}',
+          response.statusCode,
+        );
       }
     } catch (e) {
       print('🚨 Search API Exception: $e');
@@ -117,7 +155,7 @@ class MovieApiService {
     }
 
     final genre = movie.genre?.toLowerCase() ?? 'drama';
-    
+
     // Using working placeholder images based on genre
     switch (genre) {
       case 'comedy':

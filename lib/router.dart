@@ -12,20 +12,23 @@ import 'screens/mood_discovery_page.dart';
 import 'screens/chat_page.dart';
 import 'screens/myratings_page.dart';
 import 'screens/settings_page.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import for ConsumerStatefulWidget
-import 'providers/auth_provider.dart'; // Import auth provider
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'providers/auth_provider.dart';
 import 'models/movie.dart';
 import 'widgets/gradient_background.dart';
-import 'screens/watchlist_page.dart'; // Import WatchlistPage to access its providers
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
 
-class AppRouter {
-  static final GoRouter router = GoRouter(
+// Create a provider for the router that depends on auth state
+final routerProvider = Provider<GoRouter>((ref) {
+  final authState = ref.watch(authProvider);
+
+  return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/splash',
     debugLogDiagnostics: true,
+    refreshListenable: GoRouterRefreshNotifier(ref),
     routes: [
       // Splash Screen Route
       GoRoute(
@@ -147,11 +150,11 @@ class AppRouter {
         builder: (context, state) {
           final movieId = state.pathParameters['id']!;
           final movie = state.extra as Movie?;
-          
+
           if (movie != null) {
             return MovieDetailsPage(movie: movie);
           }
-          
+
           // If no movie object is passed, create a placeholder or fetch from API
           return MovieDetailsPage(
             movie: Movie(
@@ -165,22 +168,58 @@ class AppRouter {
       ),
     ],
     redirect: (context, state) {
-      // You can add authentication logic here
-      // For now, we'll allow access to all routes
-      // Replace this with actual authentication check when needed
-      
-      return null; // No redirect needed for now
+      final isAuthenticated = authState.isAuthenticated;
+      final isLoading = authState.isLoading;
+      final currentPath = state.matchedLocation;
+      final isOnSplash = currentPath == '/splash';
+      final isOnLogin = currentPath == '/login';
+      final isOnRegister = currentPath == '/register';
+
+      print(
+        '🔄 Router redirect check: path=$currentPath, auth=$isAuthenticated, loading=$isLoading',
+      );
+
+      // CRITICAL FIX: If still checking auth status, show splash
+      if (isLoading && !isAuthenticated) {
+        if (!isOnSplash) {
+          print('⏳ Still loading auth, showing splash');
+          return '/splash';
+        }
+        return null; // Stay on splash
+      }
+
+      // If authenticated, redirect away from auth pages
+      if (isAuthenticated && !isLoading) {
+        if (isOnSplash || isOnLogin || isOnRegister) {
+          print('✅ Redirecting authenticated user to /home from $currentPath');
+          return '/home';
+        }
+        return null; // Already on a protected page
+      }
+
+      // If not authenticated and not loading, show login
+      if (!isAuthenticated && !isLoading) {
+        if (!isOnLogin && !isOnRegister && !isOnSplash) {
+          print('🔒 Redirecting unauthenticated user to /login from $currentPath');
+          return '/login';
+        }
+        // If on splash and not authenticated, go to login
+        if (isOnSplash) {
+          print('🔒 Moving from splash to login');
+          return '/login';
+        }
+        return null; // Already on login/register
+      }
+
+      print('➡️ No redirect needed');
+      return null;
     },
     errorBuilder: (context, state) => Scaffold(
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
               'Page Not Found',
@@ -201,27 +240,43 @@ class AppRouter {
       ),
     ),
   );
+});
+
+// Refresh notifier for GoRouter that listens to auth changes
+class GoRouterRefreshNotifier extends ChangeNotifier {
+  GoRouterRefreshNotifier(this._ref) {
+    _ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
+  }
+
+  final Ref _ref;
+}
+
+// For backwards compatibility, create a static router reference
+class AppRouter {
+  static GoRouter get router => throw UnimplementedError(
+    'Use ref.read(routerProvider) instead of AppRouter.router',
+  );
 }
 
 // Main Shell Widget that provides bottom navigation
-class MainShell extends ConsumerStatefulWidget { // Change to ConsumerStatefulWidget
+class MainShell extends ConsumerStatefulWidget {
   final Widget child;
 
   const MainShell({super.key, required this.child});
 
   @override
-  ConsumerState<MainShell> createState() => _MainShellState(); // Change to ConsumerState
+  ConsumerState<MainShell> createState() => _MainShellState();
 }
 
 class _MainShellState extends ConsumerState<MainShell> {
   int _selectedIndex = 0;
-  bool _messageShown = false; // To track if the message has been shown
-  AuthState? _previousAuthState; // Track previous auth state
+  bool _messageShown = false;
+  AuthState? _previousAuthState;
 
   @override
   void initState() {
     super.initState();
-    _previousAuthState = ref.read(authProvider); // Initialize with current state
+    _previousAuthState = ref.read(authProvider);
   }
 
   void _showMessageFromFab() {
@@ -233,14 +288,18 @@ class _MainShellState extends ConsumerState<MainShell> {
         SnackBar(
           content: Text(
             "yo! what's the vibe check? 🎬",
-            style: theme.textTheme.bodyLarge?.copyWith(color: colorScheme.onPrimary),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: colorScheme.onPrimary,
+            ),
           ),
           backgroundColor: colorScheme.primary,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.only(
-            bottom: 80, // Simplified positioning
+            bottom: 80,
             right: 16,
           ),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -253,7 +312,7 @@ class _MainShellState extends ConsumerState<MainShell> {
     setState(() {
       _selectedIndex = index;
     });
-    
+
     switch (index) {
       case 0:
         context.go('/home');
@@ -262,7 +321,6 @@ class _MainShellState extends ConsumerState<MainShell> {
         context.go('/search');
         break;
       case 2:
-        // Invalidate watchlist providers to force a reload
         final token = ref.read(authTokenProvider);
         if (token != null) {
           ref.invalidate(favoriteMovieIdsProvider(token));
@@ -281,7 +339,6 @@ class _MainShellState extends ConsumerState<MainShell> {
     super.didUpdateWidget(oldWidget);
     final currentAuthState = ref.read(authProvider);
 
-    // Check if a fresh login just occurred and message hasn't been shown
     if (currentAuthState.isAuthenticated &&
         currentAuthState.justLoggedIn &&
         !_messageShown &&
@@ -290,15 +347,13 @@ class _MainShellState extends ConsumerState<MainShell> {
       ref.read(authProvider.notifier).clearJustLoggedIn();
       _messageShown = true;
     }
-    _previousAuthState = currentAuthState; // Update previous state
+    _previousAuthState = currentAuthState;
   }
 
   @override
   Widget build(BuildContext context) {
-    // No ref.listen here, just watch the state
-    final authState = ref.watch(authProvider); // Watch auth state to trigger rebuilds
+    ref.watch(authProvider);
 
-    // Determine current index based on location
     final location = GoRouterState.of(context).fullPath;
     if (location?.startsWith('/home') == true) {
       _selectedIndex = 0;
@@ -315,69 +370,72 @@ class _MainShellState extends ConsumerState<MainShell> {
         backgroundColor: Colors.transparent,
         body: widget.child,
         bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.search_outlined),
-            selectedIcon: Icon(Icons.search),
-            label: 'Search',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'Watchlist',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
-      ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
-              spreadRadius: 2,
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.search_outlined),
+              selectedIcon: Icon(Icons.search),
+              label: 'Search',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bookmark_outline),
+              selectedIcon: Icon(Icons.bookmark),
+              label: 'Watchlist',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profile',
             ),
           ],
         ),
-        child: FloatingActionButton(
-          onPressed: () {
-            context.push('/chat');
-          },
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          shape: const CircleBorder(),
-          child: Icon(
-            Icons.smart_toy_outlined,
-            size: 36,
-            color: Theme.of(context).colorScheme.onPrimary,
+        floatingActionButton: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.secondary,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                spreadRadius: 2,
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            onPressed: () {
+              context.push('/chat');
+            },
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            shape: const CircleBorder(),
+            child: Icon(
+              Icons.smart_toy_outlined,
+              size: 36,
+              color: Theme.of(context).colorScheme.onPrimary,
+            ),
           ),
         ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       ),
     );
   }
 }
 
-// Navigation Extensions for easier usage
+// Navigation Extensions
 extension AppRouterExtension on GoRouter {
   void goToLogin() => go('/login');
   void goToRegister() => go('/register');
@@ -386,7 +444,7 @@ extension AppRouterExtension on GoRouter {
   void goToWatchlist() => go('/watchlist');
   void goToProfile() => go('/profile');
   void goToMoodDiscovery() => go('/mood-discovery');
-  
+
   void goToMovieDetails(Movie movie, {String? from}) {
     if (from != null) {
       go('/$from/movie-details', extra: movie);
@@ -394,7 +452,7 @@ extension AppRouterExtension on GoRouter {
       go('/movie/${movie.id}', extra: movie);
     }
   }
-  
+
   void pushMovieDetails(Movie movie) {
     push('/movie/${movie.id}', extra: movie);
   }
@@ -403,31 +461,21 @@ extension AppRouterExtension on GoRouter {
 // Helper class for navigation
 class AppNavigation {
   static final GoRouter _router = AppRouter.router;
-  
-  // Authentication Navigation
+
   static void toLogin() => _router.goToLogin();
   static void toRegister() => _router.goToRegister();
-  
-  // Main App Navigation
   static void toHome() => _router.goToHome();
   static void toSearch() => _router.goToSearch();
   static void toWatchlist() => _router.goToWatchlist();
   static void toProfile() => _router.goToProfile();
   static void toMoodDiscovery() => _router.goToMoodDiscovery();
-  
-  // Movie Details Navigation
   static void toMovieDetails(Movie movie) => _router.pushMovieDetails(movie);
   static void toMovieDetailsFromTab(Movie movie, String tab) {
     _router.goToMovieDetails(movie, from: tab);
   }
-  
-  // Navigation Actions
   static void back() => _router.pop();
   static void backToRoot() => _router.go('/home');
-  
-  // Get current location
-  static String get currentLocation => _router.routerDelegate.currentConfiguration.fullPath;
-  
-  // Check if can pop
+  static String get currentLocation =>
+      _router.routerDelegate.currentConfiguration.fullPath;
   static bool get canPop => _router.canPop();
 }

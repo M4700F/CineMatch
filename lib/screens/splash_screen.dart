@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'dart:async'; // Import for Timer
 import '../widgets/gradient_background.dart';
 
@@ -102,39 +101,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   );
                 },
               ),
-              const SizedBox(height: 80),
-              SizedBox(
-                width: 200,
-                child: ElevatedButton(
-                  onPressed: () => context.go('/login'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    'Sign In',
-                    style: TextStyle(fontSize: 18),
-                  ),
+              const SizedBox(height: 40),
+              // Loading indicator
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: 200,
-                child: OutlinedButton(
-                  onPressed: () => context.go('/register'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    side: BorderSide(color: Theme.of(context).colorScheme.onPrimary),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: Text(
-                    'Register',
-                    style: TextStyle(fontSize: 18, color: Theme.of(context).colorScheme.onPrimary),
-                  ),
+              Text(
+                'Loading...',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontSize: 16,
                 ),
               ),
             ],

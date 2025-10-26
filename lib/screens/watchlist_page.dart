@@ -11,25 +11,45 @@ import '../services/movie_api_service.dart'; // Import MovieApiService
 // Removed tab_selection_provider import as it's no longer needed here
 
 // Providers for fetching movie IDs
-final favoriteMovieIdsProvider = FutureProvider.family<List<int>, String>((ref, token) async {
+final favoriteMovieIdsProvider = FutureProvider.family<List<int>, String>((
+  ref,
+  token,
+) async {
   return WatchlistService.getFavoriteMovieIds(token: token);
 });
 
-final watchLaterMovieIdsProvider = FutureProvider.family<List<int>, String>((ref, token) async {
+final watchLaterMovieIdsProvider = FutureProvider.family<List<int>, String>((
+  ref,
+  token,
+) async {
   return WatchlistService.getWatchLaterMovieIds(token: token);
 });
 
 // Providers for fetching full Movie objects
-final favoriteMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, token) async {
+final favoriteMoviesProvider = FutureProvider.family<List<Movie>, String>((
+  ref,
+  token,
+) async {
   final movieIds = await ref.watch(favoriteMovieIdsProvider(token).future);
   if (movieIds.isEmpty) return [];
-  return Future.wait(movieIds.map((id) => MovieApiService.getMovieById(id.toString())));
+  return Future.wait(
+    movieIds.map(
+      (id) => MovieApiService.getMovieById(id.toString(), token: token),
+    ),
+  );
 });
 
-final watchLaterMoviesProvider = FutureProvider.family<List<Movie>, String>((ref, token) async {
+final watchLaterMoviesProvider = FutureProvider.family<List<Movie>, String>((
+  ref,
+  token,
+) async {
   final movieIds = await ref.watch(watchLaterMovieIdsProvider(token).future);
   if (movieIds.isEmpty) return [];
-  return Future.wait(movieIds.map((id) => MovieApiService.getMovieById(id.toString())));
+  return Future.wait(
+    movieIds.map(
+      (id) => MovieApiService.getMovieById(id.toString(), token: token),
+    ),
+  );
 });
 
 class WatchlistPage extends ConsumerStatefulWidget {
@@ -58,9 +78,7 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
   void _navigateToDetails(Movie movie) {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (context) => MovieDetailsPage(movie: movie),
-      ),
+      MaterialPageRoute(builder: (context) => MovieDetailsPage(movie: movie)),
     );
   }
 
@@ -94,11 +112,9 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
         );
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${movie.title} removed'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${movie.title} removed')));
       // Invalidate providers to refetch data
       ref.invalidate(favoriteMovieIdsProvider(token));
       ref.invalidate(watchLaterMovieIdsProvider(token));
@@ -129,7 +145,9 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    isFavorite ? Icons.favorite_outline : Icons.watch_later_outlined,
+                    isFavorite
+                        ? Icons.favorite_outline
+                        : Icons.watch_later_outlined,
                     size: 48,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -172,7 +190,9 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
 
             return Card(
               elevation: 3,
-              shadowColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+              shadowColor: Theme.of(
+                context,
+              ).colorScheme.primary.withOpacity(0.2),
               clipBehavior: Clip.antiAlias,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -189,33 +209,47 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
                         children: [
                           Container(
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceVariant,
                             ),
                             child: CachedNetworkImage(
                               imageUrl: imageUrl,
                               fit: BoxFit.cover,
                               placeholder: (context, url) => Container(
-                                color: Theme.of(context).colorScheme.surfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceVariant,
                                 child: Center(
-                                  child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                                  child: CircularProgressIndicator(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
                                 ),
                               ),
                               errorWidget: (context, url, error) => Container(
-                                color: Theme.of(context).colorScheme.surfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceVariant,
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
                                       Icons.movie_outlined,
                                       size: 48,
-                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
                                     ),
                                     const SizedBox(height: 8),
                                     Text(
                                       'No Image',
                                       style: TextStyle(
                                         fontSize: 12,
-                                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
                                       ),
                                     ),
                                   ],
@@ -278,75 +312,91 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
                         ],
                       ),
                     ),
+
+                    // Replace the Expanded(flex: 1, ...) section in your watchlist_page.dart
+                    // Starting around line 260
                     Expanded(
                       flex: 1,
                       child: Padding(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(10),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  movie.title,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: Theme.of(context).colorScheme.onSurface,
-                                    height: 1.2,
+                            // Title and Year - takes available space
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      movie.title,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurface,
+                                        height: 1.2,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                  maxLines: 2,
+                                  if (movie.year != null) ...[
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.calendar_today,
+                                          size: 12,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          movie.year.toString(),
+                                          style: TextStyle(
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            // Genre tags - fixed at bottom
+                            if (movie.genre != null && movie.genre!.isNotEmpty)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  movie.genre!,
+                                  style: TextStyle(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimaryContainer,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                if (movie.year != null) ...[
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        size: 12,
-                                        color: Theme.of(context).colorScheme.primary,
-                                      ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        movie.year.toString(),
-                                        style: TextStyle(
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ],
-                            ),
-                            if (movie.genre != null && movie.genre!.isNotEmpty)
-                              Wrap(
-                                spacing: 4,
-                                runSpacing: 4,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.primaryContainer,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      movie.genre!,
-                                      style: TextStyle(
-                                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
                               ),
                           ],
                         ),
@@ -391,7 +441,9 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
               borderRadius: BorderRadius.circular(24),
             ),
             labelColor: Theme.of(context).colorScheme.onPrimary,
-            unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+            unselectedLabelColor: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant,
             dividerColor: Colors.transparent,
             tabs: const [
               Tab(
@@ -428,5 +480,5 @@ class _WatchlistPageState extends ConsumerState<WatchlistPage>
         ),
       ],
     );
-}
+  }
 }

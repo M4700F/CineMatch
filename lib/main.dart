@@ -12,34 +12,39 @@ void main() {
       // Filter out known mouse tracking assertions in debug mode
       if (details.toString().contains('mouse_tracker.dart') ||
           details.toString().contains('Assertion failed')) {
-        debugPrint('🐭 Mouse tracking assertion filtered: ${details.exception}');
+        debugPrint(
+          '🐭 Mouse tracking assertion filtered: ${details.exception}',
+        );
         return;
       }
       FlutterError.presentError(details);
     }
   };
-  
+
   runApp(
     // Wrap the app with ProviderScope for Riverpod
-    const ProviderScope(
-      child: CineMatchApp(),
-    ),
+    const ProviderScope(child: CineMatchApp()),
   );
 }
 
-class CineMatchApp extends ConsumerWidget { // Change to ConsumerWidget
+class CineMatchApp extends ConsumerWidget {
+  // Change to ConsumerWidget
   const CineMatchApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) { // Add WidgetRef ref
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Add WidgetRef ref
     final themeModeType = ref.watch(themeProvider); // Watch the theme provider
+    final router = ref.watch(routerProvider); // Watch the router provider
 
     return MaterialApp.router(
       title: 'CineMatch',
       theme: AppTheme.lightTheme, // Set light theme as default
       darkTheme: AppTheme.darkTheme, // Define dark theme
-      themeMode: themeModeType == ThemeModeType.dark ? ThemeMode.dark : ThemeMode.light, // Use themeMode from provider
-      routerConfig: AppRouter.router,
+      themeMode: themeModeType == ThemeModeType.dark
+          ? ThemeMode.dark
+          : ThemeMode.light, // Use themeMode from provider
+      routerConfig: router,
       debugShowCheckedModeBanner: false,
     );
   }
