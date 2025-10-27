@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_background.dart';
+import '../widgets/email_verification_banner.dart';
+import '../services/api_service.dart';
 // import '../providers/theme_provider.dart'; // Theme toggling not used on this screen currently
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -27,17 +29,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
+      final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+
+      print('🔵 Starting login for: $email');
+
       try {
         final success = await ref
             .read(authProvider.notifier)
-            .login(
-              _emailController.text.trim(),
-              _passwordController.text.trim(),
-            );
+            .login(email, password);
+
+        print('🔵 Login result: $success');
 
         if (!mounted) return;
 
         if (success) {
+          print('✅ Login successful!');
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Login successful!'),
@@ -46,17 +53,144 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
           );
           // Don't manually navigate - let the router's redirect handle it
+        } else {
+          print('❌ Login failed, checking auth state error...');
+          _handleLoginFailure();
         }
       } catch (e) {
+        print('❌ Login exception caught: $e');
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Login failed: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        _handleLoginFailure(fallbackError: e.toString());
       }
     }
+  }
+
+  void _handleLoginFailure({String? fallbackError}) {
+    final authState = ref.read(authProvider);
+    final unverifiedEmail = authState.unverifiedEmail;
+    final errorMessage = authState.error ?? fallbackError;
+
+    print('🔍 Login failure handler invoked');
+    print('🔍 Unverified email in state: $unverifiedEmail');
+    print('🔍 Error message: $errorMessage');
+
+    if (unverifiedEmail != null) {
+      // Banner will render via build; provide quick toast feedback too
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please verify your email to continue'),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
+    if (errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_formatErrorMessage(errorMessage)),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+      return;
+    }
+
+    // Fallback generic error
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Login failed. Please try again.'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _resendVerification(String email) async {
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Text('Sending verification email...'),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    try {
+      await ApiService.resendVerificationEmail(email: email);
+
+      if (!mounted) return;
+
+      // Show success message
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Verification email sent to $email! Check your inbox.',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      // Show error message
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.error_outline, color: Colors.white),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Failed to send verification email: ${_formatErrorMessage(e.toString())}',
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _dismissBanner() {
+    ref.read(authProvider.notifier).clearUnverifiedEmail();
+  }
+
+  String _formatErrorMessage(String error) {
+    // Extract meaningful message from error string
+    if (error.contains(':')) {
+      final parts = error.split(':');
+      return parts.last.trim();
+    }
+    return error;
   }
 
   void _navigateToRegister() {
@@ -77,6 +211,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
     final isLoading = authState.isLoading;
+    final unverifiedEmail = authState.unverifiedEmail;
     // Watch the theme provider if needed in the future for dynamic styling
 
     return GradientBackground(
@@ -143,6 +278,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 ),
 
                 const SizedBox(height: 48),
+
+                // Email Verification Banner
+                if (unverifiedEmail != null) ...[
+                  EmailVerificationBanner(
+                    email: unverifiedEmail,
+                    onResendEmail: () => _resendVerification(unverifiedEmail),
+                    onDismiss: _dismissBanner,
+                  ),
+                  const SizedBox(height: 24),
+                ],
 
                 // Login Form
                 Card(

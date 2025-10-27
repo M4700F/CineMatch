@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import '../widgets/gradient_background.dart';
+import '../widgets/registration_success_dialog.dart';
 // import '../providers/theme_provider.dart'; // Theme toggling not used on this screen currently
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -48,12 +49,14 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
       setState(() => _isLoading = true);
 
+      final email = _emailController.text.trim();
+
       try {
         final success = await ref
             .read(authProvider.notifier)
             .register(
               name: _nameController.text.trim(),
-              email: _emailController.text.trim(),
+              email: email,
               password: _passwordController.text.trim(),
               about: _aboutController.text.trim(),
             );
@@ -61,27 +64,49 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         if (!mounted) return;
 
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Account created successfully!'),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              duration: const Duration(seconds: 1),
+          // Show beautiful success dialog instead of snackbar
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => RegistrationSuccessDialog(
+              email: email,
+              onContinue: () {
+                Navigator.of(context).pop(); // Close dialog
+                context.go('/login'); // Navigate to login
+              },
             ),
           );
-          // Router will automatically redirect to /home after successful registration
+        } else {
+          // Check if there's an error in the auth state
+          final authState = ref.read(authProvider);
+          if (authState.error != null) {
+            _showErrorMessage(authState.error!);
+          }
         }
       } catch (e) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration failed: $e'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
+        _showErrorMessage(e.toString());
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showErrorMessage(String error) {
+    // Extract clean error message
+    String cleanMessage = error;
+    if (error.contains(':')) {
+      cleanMessage = error.split(':').last.trim();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(cleanMessage),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _navigateToLogin() {

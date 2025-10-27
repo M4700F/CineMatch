@@ -18,7 +18,8 @@ import 'models/movie.dart';
 import 'widgets/gradient_background.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+final GlobalKey<NavigatorState> _shellNavigatorKey =
+    GlobalKey<NavigatorState>();
 
 // Create a provider for the router that depends on auth state
 final routerProvider = Provider<GoRouter>((ref) {
@@ -181,11 +182,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // CRITICAL FIX: If still checking auth status, show splash
       if (isLoading && !isAuthenticated) {
-        if (!isOnSplash) {
+        if (!isOnSplash && !isOnLogin && !isOnRegister) {
           print('⏳ Still loading auth, showing splash');
           return '/splash';
         }
-        return null; // Stay on splash
+        return null; // Stay on the current auth screen
       }
 
       // If authenticated, redirect away from auth pages
@@ -200,7 +201,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // If not authenticated and not loading, show login
       if (!isAuthenticated && !isLoading) {
         if (!isOnLogin && !isOnRegister && !isOnSplash) {
-          print('🔒 Redirecting unauthenticated user to /login from $currentPath');
+          print(
+            '🔒 Redirecting unauthenticated user to /login from $currentPath',
+          );
           return '/login';
         }
         // If on splash and not authenticated, go to login
@@ -298,10 +301,7 @@ class _MainShellState extends ConsumerState<MainShell> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          margin: const EdgeInsets.only(
-            bottom: 80,
-            right: 16,
-          ),
+          margin: const EdgeInsets.only(bottom: 80, right: 16),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       );
@@ -473,6 +473,7 @@ class AppNavigation {
   static void toMovieDetailsFromTab(Movie movie, String tab) {
     _router.goToMovieDetails(movie, from: tab);
   }
+
   static void back() => _router.pop();
   static void backToRoot() => _router.go('/home');
   static String get currentLocation =>
