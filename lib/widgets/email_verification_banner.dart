@@ -17,8 +17,8 @@ class EmailVerificationBanner extends StatefulWidget {
   /// The email address that needs verification
   final String email;
 
-  /// Callback function when the resend email button is pressed
-  final VoidCallback onResendEmail;
+  /// Async callback when the resend email button is pressed
+  final Future<void> Function() onResendEmail;
 
   /// Optional callback when the banner is dismissed
   final VoidCallback? onDismiss;
@@ -55,6 +55,7 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner>
   bool _isResendCooldown = false;
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
+  bool _isSending = false;
 
   @override
   void initState() {
@@ -99,20 +100,45 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner>
   }
 
   /// Handle resend email button press with cooldown timer
-  void _handleResendEmail() {
-    if (_isResendCooldown) return;
+  Future<void> _handleResendEmail() async {
+    if (_isSending || _isResendCooldown) return;
 
-    // Call the parent callback
-    widget.onResendEmail();
+    setState(() {
+      _isSending = true;
+    });
 
-    // Start cooldown
+    bool success = false;
+    try {
+      await widget.onResendEmail();
+      success = true;
+    } catch (e) {
+      debugPrint('Email resend callback threw: $e');
+    } finally {
+      if (!mounted) {
+        _isSending = false;
+        return;
+      }
+
+      setState(() {
+        _isSending = false;
+      });
+    }
+
+    if (!mounted || !success) {
+      return;
+    }
+
     setState(() {
       _isResendCooldown = true;
       _cooldownSeconds = widget.cooldownDuration.inSeconds;
     });
 
-    // Start countdown timer
+    _cooldownTimer?.cancel();
     _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       setState(() {
         _cooldownSeconds--;
         if (_cooldownSeconds <= 0) {
@@ -388,13 +414,21 @@ class _EmailVerificationBannerState extends State<EmailVerificationBanner>
   /// Build the resend email button with cooldown timer
   Widget _buildResendButton(bool isDarkMode) {
     return ElevatedButton.icon(
-      onPressed: _isResendCooldown ? null : _handleResendEmail,
+      onPressed: (_isResendCooldown || _isSending)
+          ? null
+          : () {
+              _handleResendEmail();
+            },
       icon: Icon(
-        _isResendCooldown ? Icons.timer_outlined : Icons.send_rounded,
+        _isResendCooldown
+            ? Icons.timer_outlined
+            : (_isSending ? Icons.hourglass_top : Icons.send_rounded),
         size: 20,
       ),
       label: Text(
-        _isResendCooldown ? 'Wait ${_cooldownSeconds}s' : 'Resend Email',
+        _isResendCooldown
+            ? 'Wait ${_cooldownSeconds}s'
+            : (_isSending ? 'Sending...' : 'Resend Email'),
         style: const TextStyle(
           fontWeight: FontWeight.w700,
           fontSize: 14,
