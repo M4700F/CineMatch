@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/movie.dart';
+import '../utils/api_exception.dart';
 import 'config_helper.dart';
 
 class MovieApiService {
@@ -181,13 +182,4 @@ class MovieApiService {
   }
 }
 
-// Custom exception class for API errors
-class ApiException implements Exception {
-  final String message;
-  final int statusCode;
-
-  ApiException(this.message, this.statusCode);
-
-  @override
-  String toString() => 'ApiException: $message (Status: $statusCode)';
-}
+// Custom exception class moved to utils/api_exception.dart

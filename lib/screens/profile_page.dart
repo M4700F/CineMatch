@@ -29,7 +29,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       id: '1',
       title: 'Quantum Nexus',
       rating: 5.0,
-      image: 'https://images.unsplash.com/photo-1644772715611-0d1f77c10e36?w=400',
+      image:
+          'https://images.unsplash.com/photo-1644772715611-0d1f77c10e36?w=400',
     ),
     Movie(
       id: '2',
@@ -41,7 +42,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       id: '3',
       title: 'Love in Paris',
       rating: 4.0,
-      image: 'https://images.unsplash.com/photo-1627964464837-6328f5931576?w=400',
+      image:
+          'https://images.unsplash.com/photo-1627964464837-6328f5931576?w=400',
     ),
   ];
 
@@ -53,7 +55,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   void _logout() async {
     final localizations = ref.read(localizationProvider);
-    
+
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
@@ -70,7 +72,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               onPressed: () => Navigator.of(context).pop(false),
               child: Text(
                 localizations.cancel,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             ElevatedButton(
@@ -97,7 +101,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).colorScheme.onPrimary,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -115,7 +121,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       if (mounted) {
         // Navigate to login page
         context.go('/login');
-        
+
         // Show success message
         Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) {
@@ -139,12 +145,12 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     final isLoading = authState.isLoading;
     final themeModeType = ref.watch(themeProvider); // Watch the theme provider
     final isDarkMode = themeModeType == ThemeModeType.dark;
-    final localizations = ref.watch(localizationProvider); // Watch localization provider
+    final localizations = ref.watch(
+      localizationProvider,
+    ); // Watch localization provider
 
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     // If not authenticated, redirect to login
@@ -168,7 +174,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                   height: 80,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.secondary],
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.secondary,
+                      ],
                     ),
                     borderRadius: BorderRadius.circular(40),
                   ),
@@ -279,10 +288,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
               localizations.myRecentRatings,
               style: Theme.of(context).textTheme.titleLarge,
             ),
-            TextButton(
-              onPressed: () {},
-              child: Text(localizations.seeAll),
-            ),
+            TextButton(onPressed: () {}, child: Text(localizations.seeAll)),
           ],
         ),
         const SizedBox(height: 12),
@@ -309,7 +315,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                             height: 150,
                             fit: BoxFit.cover,
                             placeholder: (context, url) => Container(
-                              color: Theme.of(context).colorScheme.surfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.surfaceVariant,
                             ),
                           ),
                         ),
@@ -330,7 +338,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                               children: [
                                 Icon(
                                   Icons.star,
-                                  color: Theme.of(context).colorScheme.secondary,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.secondary,
                                   size: 12,
                                 ),
                                 const SizedBox(width: 2),
@@ -347,7 +357,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     const SizedBox(height: 8),
                     Text(
                       movie.title,
-                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -373,6 +386,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           label: localizations.geminiAIChat,
           onTap: () {
             context.go('/chat');
+          },
+        ),
+        const SizedBox(height: 12),
+        _buildMenuItem(
+          icon: Icons.tune,
+          label: localizations.personalizeRecommendations,
+          onTap: () {
+            context.push('/genre-preferences');
           },
         ),
         const SizedBox(height: 12),
@@ -405,11 +426,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
-                        isDarkMode ? Icons.dark_mode : Icons.light_mode, // Use isDarkMode from provider
+                        isDarkMode
+                            ? Icons.dark_mode
+                            : Icons.light_mode, // Use isDarkMode from provider
                         color: Theme.of(context).colorScheme.primary,
                         size: 20,
                       ),
@@ -424,10 +449,16 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 Switch(
                   value: isDarkMode, // Use isDarkMode from provider
                   onChanged: (value) {
-                    ref.read(themeProvider.notifier).toggleTheme(); // Toggle theme using provider
+                    ref
+                        .read(themeProvider.notifier)
+                        .toggleTheme(); // Toggle theme using provider
                   },
-                  activeColor: Theme.of(context).colorScheme.secondary, // Use secondary color for dark mode track
-                  activeThumbColor: Theme.of(context).colorScheme.onSecondary, // Make thumb visible
+                  activeColor: Theme.of(context)
+                      .colorScheme
+                      .secondary, // Use secondary color for dark mode track
+                  activeThumbColor: Theme.of(
+                    context,
+                  ).colorScheme.onSecondary, // Make thumb visible
                 ),
               ],
             ),
@@ -437,18 +468,26 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
         // Logout Button
         ShadowContainer(
-          borderRadius: BorderRadius.circular(24), // Match defaultRadius from app_theme
+          borderRadius: BorderRadius.circular(
+            24,
+          ), // Match defaultRadius from app_theme
           elevation: 4, // Subtle elevation for the button
-          shadowColor: isDarkMode ? Colors.black54 : Colors.black26, // Adjust shadow color based on theme
-          padding: const EdgeInsets.all(0), // No internal padding, button will handle it
+          shadowColor: isDarkMode
+              ? Colors.black54
+              : Colors.black26, // Adjust shadow color based on theme
+          padding: const EdgeInsets.all(
+            0,
+          ), // No internal padding, button will handle it
           child: ElevatedButton(
             onPressed: _logout,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.transparent, // Make background transparent to show ShadowContainer's color
+              backgroundColor: Colors
+                  .transparent, // Make background transparent to show ShadowContainer's color
               foregroundColor: Theme.of(context).colorScheme.error,
               padding: const EdgeInsets.symmetric(vertical: 16),
               elevation: 0, // Remove ElevatedButton's intrinsic elevation
-              shadowColor: Colors.transparent, // Remove ElevatedButton's intrinsic shadow
+              shadowColor: Colors
+                  .transparent, // Remove ElevatedButton's intrinsic shadow
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,

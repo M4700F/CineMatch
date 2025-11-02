@@ -8,6 +8,7 @@ import '../widgets/top_app_bar.dart';
 import '../screens/movie_details.dart';
 import '../providers/movie_provider.dart';
 import '../widgets/save_to_selection_sheet.dart'; // Import the new widget
+import '../providers/language_provider.dart';
 // import '../providers/theme_provider.dart';
 
 class HomePage extends ConsumerStatefulWidget {
@@ -310,7 +311,6 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget _buildMovieGrid() {
     final movieState = ref.watch(movieProvider);
     final movies = movieState.movies;
-    final hasMoreData = movieState.hasMoreData;
     final isLoadingMore = movieState.isLoading && movies.isNotEmpty;
     // Theme can be accessed via Theme.of(context) where needed
 
@@ -578,6 +578,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     final movies = movieState.movies;
     final isLoading = movieState.isLoading;
     final error = movieState.error;
+    final localizations = ref.watch(localizationProvider);
     // Theme can be accessed via Theme.of(context) where needed
 
     return Scaffold(
@@ -589,6 +590,15 @@ class _HomePageState extends ConsumerState<HomePage> {
           onSearchClick: () {
             context.go('/search');
           },
+          extraActions: [
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              tooltip: localizations.forYou,
+              onPressed: () {
+                context.push('/recommendations');
+              },
+            ),
+          ],
         ),
       ),
       body: RefreshIndicator(

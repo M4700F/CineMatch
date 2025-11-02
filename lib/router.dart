@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/login_page.dart';
@@ -14,8 +16,11 @@ import 'screens/myratings_page.dart';
 import 'screens/settings_page.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'providers/auth_provider.dart';
+import 'providers/recommendation_provider.dart';
 import 'models/movie.dart';
 import 'widgets/gradient_background.dart';
+import 'screens/recommendations_page.dart';
+import 'screens/genre_preferences_page.dart';
 
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
 final GlobalKey<NavigatorState> _shellNavigatorKey =
@@ -94,6 +99,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ],
           ),
 
+          GoRoute(
+            path: '/recommendations',
+            name: 'recommendations',
+            builder: (context, state) => const RecommendationsPage(),
+          ),
+
           // Search Tab
           GoRoute(
             path: '/search',
@@ -140,6 +151,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/mood-discovery',
             name: 'mood-discovery',
             builder: (context, state) => const MoodDiscoveryPage(),
+          ),
+
+          GoRoute(
+            path: '/genre-preferences',
+            name: 'genre-preferences',
+            builder: (context, state) => const GenrePreferencesPage(),
           ),
         ],
       ),
@@ -274,6 +291,7 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   int _selectedIndex = 0;
   bool _messageShown = false;
+  bool _preferencesPromptChecked = false;
   AuthState? _previousAuthState;
 
   @override
@@ -339,15 +357,48 @@ class _MainShellState extends ConsumerState<MainShell> {
     super.didUpdateWidget(oldWidget);
     final currentAuthState = ref.read(authProvider);
 
+    if (!currentAuthState.isAuthenticated) {
+      _preferencesPromptChecked = false;
+    }
+
     if (currentAuthState.isAuthenticated &&
         currentAuthState.justLoggedIn &&
         !_messageShown &&
         (_previousAuthState == null || !_previousAuthState!.isAuthenticated)) {
       _showMessageFromFab();
+      _maybePromptPreferences(currentAuthState);
       ref.read(authProvider.notifier).clearJustLoggedIn();
       _messageShown = true;
     }
     _previousAuthState = currentAuthState;
+  }
+
+  void _maybePromptPreferences(AuthState authState) {
+    if (_preferencesPromptChecked) {
+      return;
+    }
+
+    final user = authState.user;
+    if (user == null) {
+      return;
+    }
+
+    _preferencesPromptChecked = true;
+
+    Future.microtask(() async {
+      final shouldPrompt = await ref
+          .read(genrePreferencesProvider.notifier)
+          .shouldPromptForUser(user.id);
+
+      if (!mounted || !shouldPrompt) {
+        return;
+      }
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.push('/genre-preferences');
+      });
+    });
   }
 
   @override
