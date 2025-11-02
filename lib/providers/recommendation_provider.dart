@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -189,7 +187,7 @@ class GenrePreferencesNotifier extends StateNotifier<GenrePreferencesState> {
     final authState = ref.read(authProvider);
     final initialUser = authState.user;
     if (authState.isAuthenticated && initialUser != null) {
-      Future.microtask(() => _loadSavedPreferences(initialUser.id));
+      Future.microtask(() => _loadPreferencesFromBackend(initialUser.id));
     }
 
     ref.listen<AuthState>(authProvider, (previous, next) {
@@ -200,7 +198,7 @@ class GenrePreferencesNotifier extends StateNotifier<GenrePreferencesState> {
 
       final user = next.user;
       if (user != null && user.id.isNotEmpty) {
-        Future.microtask(() => _loadSavedPreferences(user.id));
+        Future.microtask(() => _loadPreferencesFromBackend(user.id));
       }
     });
   }
@@ -230,10 +228,6 @@ class GenrePreferencesNotifier extends StateNotifier<GenrePreferencesState> {
 
   void resetPreferences() {
     state = GenrePreferencesState(hasCompleted: state.hasCompleted);
-    final user = ref.read(currentUserProvider);
-    if (user != null) {
-      Future.microtask(() => _savePreferences(user.id, state.preferences));
-    }
   }
 
   void clearError() {
@@ -265,7 +259,7 @@ class GenrePreferencesNotifier extends StateNotifier<GenrePreferencesState> {
           );
 
       await _markCompleted(user.id);
-      await _savePreferences(user.id, state.preferences);
+      await _loadPreferencesFromBackend(user.id);
 
       state = state.copyWith(
         recommendations: response.recommendations,
@@ -295,41 +289,25 @@ class GenrePreferencesNotifier extends StateNotifier<GenrePreferencesState> {
     }
   }
 
-  Future<void> _loadSavedPreferences(String userId) async {
+  Future<void> _loadPreferencesFromBackend(String userId) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_prefsValuesKey(userId));
-      if (raw == null || raw.isEmpty) {
+      final token = ref.read(authTokenProvider);
+      if (token == null || token.isEmpty) {
         return;
       }
-      final decoded = jsonDecode(raw) as Map<String, dynamic>;
-      final saved = NewUserPreferences.fromJson(decoded);
-      state = state.copyWith(preferences: saved);
+      final savedPreferences =
+          await RecommendationService.getUserPreferences(token: token);
+      state = state.copyWith(preferences: savedPreferences);
+      if (!savedPreferences.isDefault) {
+        await _markCompleted(userId);
+      }
     } catch (_) {
-      // Ignore corrupt or missing data.
-    }
-  }
-
-  Future<void> _savePreferences(
-    String userId,
-    NewUserPreferences preferences,
-  ) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(
-        _prefsValuesKey(userId),
-        jsonEncode(preferences.toJson()),
-      );
-    } catch (_) {
-      // Ignore storage errors; preferences will reset to defaults if saving fails.
+      // Ignore backend errors; user can retry fetching preferences later.
     }
   }
 
   static String _prefsKey(String userId) =>
       'genre_preferences_completed_$userId';
-
-  static String _prefsValuesKey(String userId) =>
-      'genre_preferences_values_$userId';
 }
 
 final genrePreferencesProvider =

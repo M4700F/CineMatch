@@ -57,4 +57,13 @@ class NewUserPreferences {
   }
 
   NewUserPreferences reset() => NewUserPreferences();
+
+  bool get isDefault {
+    for (final entry in _values.entries) {
+      if ((entry.value - 1.0).abs() > 0.0001) {
+        return false;
+      }
+    }
+    return true;
+  }
 }

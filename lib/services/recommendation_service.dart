@@ -59,6 +59,24 @@ class RecommendationService {
     throw _createException(response, 'Failed to load similar movies');
   }
 
+  static Future<NewUserPreferences> getUserPreferences({
+    required String token,
+  }) async {
+    final uri = Uri.parse('$_baseUrl/preferences/me');
+    final response = await http
+        .get(uri, headers: _headers(token: token))
+        .timeout(const Duration(seconds: 10));
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      if (body is Map<String, dynamic>) {
+        return NewUserPreferences.fromJson(body);
+      }
+    }
+
+    throw _createException(response, 'Failed to load saved preferences');
+  }
+
   static RecommendationResponse _handleResponse(http.Response response) {
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
