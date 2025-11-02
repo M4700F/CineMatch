@@ -295,8 +295,9 @@ class GenrePreferencesNotifier extends StateNotifier<GenrePreferencesState> {
       if (token == null || token.isEmpty) {
         return;
       }
-      final savedPreferences =
-          await RecommendationService.getUserPreferences(token: token);
+      final savedPreferences = await RecommendationService.getUserPreferences(
+        token: token,
+      );
       state = state.copyWith(preferences: savedPreferences);
       if (!savedPreferences.isDefault) {
         await _markCompleted(userId);
