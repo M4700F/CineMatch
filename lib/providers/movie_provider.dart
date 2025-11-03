@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/movie.dart';
 import '../services/movie_api_service.dart';
+import 'auth_provider.dart';
 
 // Movie state class
 class MovieState {
@@ -37,9 +38,11 @@ class MovieState {
 
 // Movie provider class
 class MovieNotifier extends StateNotifier<MovieState> {
-  MovieNotifier() : super(const MovieState()) {
+  MovieNotifier(this.ref) : super(const MovieState()) {
     loadMovies();
   }
+
+  final Ref ref;
 
   Future<void> loadMovies({bool refresh = false}) async {
     if (refresh) {
@@ -49,11 +52,14 @@ class MovieNotifier extends StateNotifier<MovieState> {
     }
 
     try {
+      final token = ref.read(authTokenProvider);
+
       final moviePageResponse = await MovieApiService.getAllMovies(
         pageNumber: 0,
         pageSize: 20,
         sortBy: 'title',
         sortDir: 'ASC',
+        token: token,
       );
 
       state = state.copyWith(
@@ -64,10 +70,7 @@ class MovieNotifier extends StateNotifier<MovieState> {
         error: null,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -77,12 +80,14 @@ class MovieNotifier extends StateNotifier<MovieState> {
     state = state.copyWith(isLoading: true);
 
     try {
+      final token = ref.read(authTokenProvider);
       final nextPage = state.currentPage + 1;
       final moviePageResponse = await MovieApiService.getAllMovies(
         pageNumber: nextPage,
         pageSize: 20,
         sortBy: 'title',
         sortDir: 'ASC',
+        token: token,
       );
 
       state = state.copyWith(
@@ -93,10 +98,7 @@ class MovieNotifier extends StateNotifier<MovieState> {
         error: null,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString(),
-      );
+      state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
@@ -140,7 +142,9 @@ class SearchState {
 
 // Search provider class
 class SearchNotifier extends StateNotifier<SearchState> {
-  SearchNotifier() : super(const SearchState());
+  SearchNotifier(this.ref) : super(const SearchState());
+
+  final Ref ref;
 
   Future<void> searchMovies(String keywords) async {
     if (keywords.trim().isEmpty) {
@@ -148,15 +152,15 @@ class SearchNotifier extends StateNotifier<SearchState> {
       return;
     }
 
-    state = state.copyWith(
-      isSearching: true,
-      query: keywords,
-      error: null,
-    );
+    state = state.copyWith(isSearching: true, query: keywords, error: null);
 
     try {
-      final results = await MovieApiService.searchMoviesByTitle(keywords);
-      
+      final token = ref.read(authTokenProvider);
+      final results = await MovieApiService.searchMoviesByTitle(
+        keywords,
+        token: token,
+      );
+
       state = state.copyWith(
         searchResults: results,
         isSearching: false,
@@ -183,11 +187,13 @@ class SearchNotifier extends StateNotifier<SearchState> {
 
 // Provider definitions
 final movieProvider = StateNotifierProvider<MovieNotifier, MovieState>((ref) {
-  return MovieNotifier();
+  return MovieNotifier(ref);
 });
 
-final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((ref) {
-  return SearchNotifier();
+final searchProvider = StateNotifierProvider<SearchNotifier, SearchState>((
+  ref,
+) {
+  return SearchNotifier(ref);
 });
 
 // Convenience providers

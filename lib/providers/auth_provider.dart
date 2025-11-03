@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/api_service.dart';
 import '../models/user.dart';
+import '../models/api_error.dart';
 
 // Auth state class
 class AuthState {
@@ -11,6 +12,7 @@ class AuthState {
   final String? token;
   final String? error;
   final bool justLoggedIn; // New field
+  final String? unverifiedEmail;
 
   const AuthState({
     this.isAuthenticated = false,
@@ -19,6 +21,7 @@ class AuthState {
     this.token,
     this.error,
     this.justLoggedIn = false, // Initialize new field
+    this.unverifiedEmail,
   });
 
   AuthState copyWith({
@@ -28,6 +31,8 @@ class AuthState {
     String? token,
     String? error,
     bool? justLoggedIn, // Allow copying new field
+    String? unverifiedEmail,
+    bool resetUnverifiedEmail = false,
   }) {
     return AuthState(
       isAuthenticated: isAuthenticated ?? this.isAuthenticated,
@@ -36,6 +41,9 @@ class AuthState {
       token: token ?? this.token,
       error: error ?? this.error,
       justLoggedIn: justLoggedIn ?? this.justLoggedIn, // Copy new field
+      unverifiedEmail: resetUnverifiedEmail
+          ? null
+          : (unverifiedEmail ?? this.unverifiedEmail),
     );
   }
 }
@@ -48,31 +56,39 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   Future<void> _checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('jwt_token');
-      
+
       if (token != null && token.isNotEmpty) {
         // Verify token and load user data
         await _loadUserProfile(token, justLoggedIn: false); // Not a fresh login
       } else {
-        state = state.copyWith(isLoading: false, justLoggedIn: false);
+        state = state.copyWith(
+          isLoading: false,
+          justLoggedIn: false,
+          resetUnverifiedEmail: true,
+        );
       }
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
         justLoggedIn: false,
+        resetUnverifiedEmail: true,
       );
     }
   }
 
-  Future<void> _loadUserProfile(String token, {bool justLoggedIn = false}) async {
+  Future<void> _loadUserProfile(
+    String token, {
+    bool justLoggedIn = false,
+  }) async {
     try {
       final userData = await ApiService.getUserProfile(token);
       final user = User.fromJson(userData);
-      
+
       state = state.copyWith(
         isAuthenticated: true,
         isLoading: false,
@@ -80,6 +96,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         token: token,
         error: null,
         justLoggedIn: justLoggedIn, // Set based on parameter
+        resetUnverifiedEmail: true,
       );
     } catch (e) {
       // Token might be invalid, clear it
@@ -88,29 +105,54 @@ class AuthNotifier extends StateNotifier<AuthState> {
         isLoading: false,
         error: 'Session expired. Please login again.',
         justLoggedIn: false,
+        resetUnverifiedEmail: true,
       );
     }
   }
 
   Future<bool> login(String email, String password) async {
-    state = state.copyWith(isLoading: true, error: null, justLoggedIn: false); // Reset before login attempt
-    
+    state = state.copyWith(
+      isLoading: true,
+      error: null,
+      justLoggedIn: false,
+      resetUnverifiedEmail: true,
+    ); // Reset before login attempt
+
     try {
-      final token = await ApiService.loginUser(email: email, password: password);
-      
+      final token = await ApiService.loginUser(
+        email: email,
+        password: password,
+      );
+
       // Store token
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('jwt_token', token);
-      
+
       // Load user profile, indicating a fresh login
       await _loadUserProfile(token, justLoggedIn: true);
-      
+
       return true;
     } catch (e) {
+      // Preserve the original error message without modification
+      String errorMessage;
+      if (e is ApiError) {
+        errorMessage = e.message; // Use the raw message from ApiError
+        print('🔴 ApiError detected - Message: ${e.message}');
+        print('🔴 ApiError - Status Code: ${e.statusCode}');
+        print('🔴 ApiError - Is Email Not Verified: ${e.isEmailNotVerified}');
+      } else {
+        errorMessage = e.toString();
+      }
+
+      print('🔴 Auth Provider Login Error: $errorMessage');
+      print('🔴 Error Type: ${e.runtimeType}');
+
       state = state.copyWith(
         isLoading: false,
-        error: e.toString(),
+        error: errorMessage,
         justLoggedIn: false,
+        unverifiedEmail: (e is ApiError && e.isEmailNotVerified) ? email : null,
+        resetUnverifiedEmail: !(e is ApiError && e.isEmailNotVerified),
       );
       return false;
     }
@@ -123,7 +165,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     required String about,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       await ApiService.registerUser(
         name: name,
@@ -131,27 +173,35 @@ class AuthNotifier extends StateNotifier<AuthState> {
         password: password,
         about: about,
       );
-      
-      // Auto-login after registration
-      return await login(email, password);
+
+      // Don't auto-login after registration - email needs to be verified first
+      state = state.copyWith(isLoading: false, resetUnverifiedEmail: true);
+      return true;
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         error: e.toString(),
         justLoggedIn: false,
+        resetUnverifiedEmail: true,
       );
       return false;
     }
   }
 
   Future<void> logout() async {
-    state = state.copyWith(isLoading: true, justLoggedIn: false); // Reset on logout
-    
+    state = state.copyWith(
+      isLoading: true,
+      justLoggedIn: false,
+      resetUnverifiedEmail: true,
+    ); // Reset on logout
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('jwt_token');
-      
-      state = const AuthState(justLoggedIn: false); // Ensure justLoggedIn is false on logout
+
+      state = const AuthState(
+        justLoggedIn: false,
+      ); // Ensure justLoggedIn is false on logout
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -163,6 +213,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   void clearJustLoggedIn() {
     state = state.copyWith(justLoggedIn: false);
+  }
+
+  void clearUnverifiedEmail() {
+    state = state.copyWith(resetUnverifiedEmail: true);
   }
 }
 

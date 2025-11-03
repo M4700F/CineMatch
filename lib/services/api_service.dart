@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'config_helper.dart';
+import '../models/api_error.dart';
 
 class ApiService {
   // static const String baseUrl = "http://localhost:8080/api/v1/auth";
@@ -16,21 +17,40 @@ class ApiService {
     required String about,
   }) async {
     final url = Uri.parse('$baseUrl/register');
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "name": name,
-        "email": email,
-        "password": password,
-        "about": about,
-      }),
-    );
 
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception("Failed to register user: ${response.body}");
+    print('📝 Registration request to: $url');
+    print('📧 Email: $email');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "name": name,
+              "email": email,
+              "password": password,
+              "about": about,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('📡 Registration Response Status: ${response.statusCode}');
+      print('📄 Registration Response Body: ${response.body}');
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        // Parse the error response and throw ApiError
+        final apiError = ApiError.fromResponse(
+          response.statusCode,
+          response.body,
+        );
+        throw apiError;
+      }
+    } catch (e) {
+      print('🚨 Registration Exception: $e');
+      rethrow; // Rethrow to preserve ApiError type
     }
   }
 
@@ -40,17 +60,36 @@ class ApiService {
     required String password,
   }) async {
     final url = Uri.parse('$baseUrl/login');
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"username": email, "password": password}),
-    );
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      return data['token']; // JWT token
-    } else {
-      throw Exception("Invalid credentials");
+    print('🔐 Login request to: $url');
+    print('📧 Email: $email');
+
+    try {
+      final response = await http
+          .post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({"username": email, "password": password}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('📡 Login Response Status: ${response.statusCode}');
+      print('📄 Login Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['token']; // JWT token
+      } else {
+        // Parse the error response and throw ApiError
+        final apiError = ApiError.fromResponse(
+          response.statusCode,
+          response.body,
+        );
+        throw apiError;
+      }
+    } catch (e) {
+      print('🚨 Login Exception: $e');
+      rethrow; // Rethrow to preserve ApiError type
     }
   }
 
@@ -72,11 +111,43 @@ class ApiService {
       } else if (response.statusCode == 401) {
         throw Exception('Unauthorized: token invalid or expired');
       } else {
-        throw Exception('Failed to load user profile: ${response.statusCode} ${response.body}');
+        throw Exception(
+          'Failed to load user profile: ${response.statusCode} ${response.body}',
+        );
       }
     } catch (e) {
       throw Exception('Error fetching user profile: $e');
     }
   }
 
+  // RESEND VERIFICATION EMAIL
+  static Future<void> resendVerificationEmail({required String email}) async {
+    final url = Uri.parse('$baseUrl/resend-verification?email=$email');
+
+    print('📧 Resending verification email to: $email');
+
+    try {
+      final response = await http
+          .post(url, headers: {"Content-Type": "application/json"})
+          .timeout(const Duration(seconds: 10));
+
+      print('📡 Resend Verification Response Status: ${response.statusCode}');
+      print('📄 Resend Verification Response Body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        print('✅ Verification email sent successfully');
+        return;
+      } else {
+        // Parse the error response and throw ApiError
+        final apiError = ApiError.fromResponse(
+          response.statusCode,
+          response.body,
+        );
+        throw apiError;
+      }
+    } catch (e) {
+      print('🚨 Resend Verification Exception: $e');
+      rethrow;
+    }
+  }
 }

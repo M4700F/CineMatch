@@ -4,18 +4,42 @@ class TopAppBarWidget extends StatelessWidget {
   final String title;
   final bool showSearch;
   final VoidCallback? onSearchClick;
+  final List<Widget> extraActions;
 
   const TopAppBarWidget({
     super.key,
     required this.title,
     this.showSearch = true,
     this.onSearchClick,
+    this.extraActions = const [],
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final actions = <Widget>[];
+
+    actions.addAll(extraActions);
+
+    if (showSearch) {
+      actions.add(
+        IconButton(
+          icon: Icon(
+            Icons.search,
+            color: isDark
+                ? Theme.of(context).colorScheme.onSurface
+                : Theme.of(context).colorScheme.onSurface,
+          ),
+          onPressed: onSearchClick,
+          tooltip: 'Search',
+        ),
+      );
+    }
+
+    if (actions.isNotEmpty) {
+      actions.add(const SizedBox(width: 8));
+    }
+
     return AppBar(
       elevation: 0,
       backgroundColor: Colors.transparent,
@@ -26,8 +50,8 @@ class TopAppBarWidget extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  Theme.of(context).colorScheme.primary, 
-                  Theme.of(context).colorScheme.secondary
+                  Theme.of(context).colorScheme.primary,
+                  Theme.of(context).colorScheme.secondary,
                 ],
               ),
               borderRadius: BorderRadius.circular(10),
@@ -39,11 +63,7 @@ class TopAppBarWidget extends StatelessWidget {
                 ),
               ],
             ),
-            child: Icon(
-              Icons.movie_outlined,
-              color: Colors.white,
-              size: 22,
-            ),
+            child: Icon(Icons.movie_outlined, color: Colors.white, size: 22),
           ),
           const SizedBox(width: 12),
           ShaderMask(
@@ -65,21 +85,7 @@ class TopAppBarWidget extends StatelessWidget {
           ),
         ],
       ),
-      actions: showSearch
-          ? [
-              IconButton(
-                icon: Icon(
-                  Icons.search,
-                  color: isDark 
-                      ? Theme.of(context).colorScheme.onSurface
-                      : Theme.of(context).colorScheme.onSurface,
-                ),
-                onPressed: onSearchClick,
-                tooltip: 'Search',
-              ),
-              const SizedBox(width: 8),
-            ]
-          : null,
+      actions: actions.isEmpty ? null : actions,
     );
   }
 }
