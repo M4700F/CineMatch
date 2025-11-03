@@ -234,7 +234,7 @@ FASTAPI_URL=http://localhost:8001
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 👨‍💻 Contributors
+## Contributors
 
 **Maroof Ahmed**
 - GitHub: [M4700F](https://github.com/M4700F)
@@ -248,7 +248,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - GitHub: [fazzyboo](https://github.com/fazzyboo)
 - [LinkedIn](https://github.com/fazzyboo)
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Movie data provided by [MovieLens](https://grouplens.org/datasets/movielens/)
 - AI services powered by [Google Gemini](https://deepmind.google/technologies/gemini/)
